@@ -1,0 +1,432 @@
+#include <HID-Project.h>
+#include <HID-Settings.h>
+#include <Keypad.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 32
+#define OLED_RESET -1
+#define SCREEN_ADDRESS 0x3C
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+//Rotary Atas
+#define CLK1 4 //Merah
+#define DT1 5 //Oranye
+#define SW1 6 //Ungu
+
+//Rotary Bawah
+#define CLK2 7 //BiruTua
+#define DT2 8 //Kuning
+#define SW2 9 //Hijau
+
+//---------Button------------
+const byte ROWS = 3;
+const byte COLS = 4;
+char keys[ROWS][COLS] = {
+  {'A', '1', '4', '7'},
+  {'B', '2', '5', '8'},
+  {'C', '3', '6', '9'}
+};
+byte rowPins[ROWS] = {18, 19, 20}; //Coklat,BiruTua,Hijau
+byte colPins[COLS] = {10, 16, 14, 15}; //Kuning,Ungu,Oranye,Putih
+Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
+
+//------------Rotary--------------
+int counter1 = 0;
+int currentStateCLK1;
+int lastStateCLK1;
+String currentDir1 = "";
+unsigned long lastButtonPress1 = 0;
+
+int counter2 = 0;
+int currentStateCLK2;
+int lastStateCLK2;
+String currentDir2 = "";
+unsigned long lastButtonPress2 = 0;
+
+// Variabel profil aktif
+char currentProfile = 'A';
+
+void setup() {
+  Serial.begin(9600);
+
+  // Rotary Encoder Atas
+  pinMode(CLK1, INPUT_PULLUP);
+  pinMode(DT1, INPUT_PULLUP);
+  pinMode(SW1, INPUT_PULLUP);
+
+  // Rotary Encoder Bawah
+  pinMode(CLK2, INPUT_PULLUP);
+  pinMode(DT2, INPUT_PULLUP);
+  pinMode(SW2, INPUT_PULLUP);
+
+  lastStateCLK1 = digitalRead(CLK1);
+  lastStateCLK2 = digitalRead(CLK2);
+
+  display.begin();
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.print("Gajah");
+  display.setCursor(0, 15);
+  display.print("Terbang");
+  display.display();
+  delay(1000);
+
+}
+
+void loop() {
+  rtr_space();
+  btn_space();
+}
+
+
+void rtr_space() {
+
+  // ----------------- Rotary Atas ---------------
+  currentStateCLK1 = digitalRead(CLK1);
+  if (currentStateCLK1 != lastStateCLK1  && currentStateCLK1 == 1) {
+    if (digitalRead(DT1) != currentStateCLK1) {
+      Serial.println("Putar Kanan1");
+      switch (currentProfile) {
+        case 'A':
+          Consumer.write(MEDIA_VOLUME_UP);
+          break;
+        case 'B':
+          Consumer.write(MEDIA_VOLUME_UP);
+          break;
+        case 'C':
+          Mouse.move(0, 10);
+          break;
+      }
+    } else {
+      Serial.println("Putar Kiri1");
+      switch (currentProfile) {
+        case 'A':
+          Consumer.write(MEDIA_VOLUME_DOWN);
+          break;
+        case 'B':
+          Consumer.write(MEDIA_VOLUME_DOWN);
+          break;
+        case 'C':
+          Mouse.move(0, -10);
+          break;
+      }
+    }
+  }
+  lastStateCLK1 = currentStateCLK1;
+  int btnState1 = digitalRead(SW1);
+  if (btnState1 == LOW) {
+    if (millis() - lastButtonPress1 > 50) {
+      switch (currentProfile) {
+        case 'A':
+          Consumer.write(MEDIA_VOLUME_MUTE);
+          break;
+        case 'B':
+          Consumer.write(MEDIA_VOLUME_MUTE);
+          break;
+        case 'C':
+          // profil C
+          break;
+      }
+    }
+    lastButtonPress1 = millis();
+  }
+
+  // ------------------ Rotary Bawah --------------
+  currentStateCLK2 = digitalRead(CLK2);
+  if (currentStateCLK2 != lastStateCLK2  && currentStateCLK2 == 1) {
+    if (digitalRead(DT2) != currentStateCLK2) {
+      Serial.println("Putar Kanan2");
+      switch (currentProfile) {
+        case 'A':
+          Keyboard.write(KEY_RIGHT_ARROW);
+          break;
+        case 'B':
+          Keyboard.write(KEY_RIGHT_ARROW);
+          break;
+        case 'C':
+          Mouse.move(10, 0);
+          break;
+      }
+    } else {
+      Serial.println("Putar Kiri2");
+      switch (currentProfile) {
+        case 'A':
+          Keyboard.write(KEY_LEFT_ARROW);
+          break;
+        case 'B':
+          Keyboard.write(KEY_LEFT_ARROW);
+          break;
+        case 'C':
+          Mouse.move(-10, 0);
+          break;
+      }
+    }
+  }
+  lastStateCLK2 = currentStateCLK2;
+  int btnState2 = digitalRead(SW2);
+  if (btnState2 == LOW) {
+    if (millis() - lastButtonPress2 > 50) {
+      switch (currentProfile) {
+        case 'A':
+          Consumer.write(MEDIA_PLAY_PAUSE);
+          break;
+        case 'B':
+          Consumer.write(MEDIA_PLAY_PAUSE);
+          break;
+        case 'C':
+          // profil C
+          break;
+      }
+    }
+    lastButtonPress2 = millis();
+  }
+}
+
+
+void btn_space() {
+  char key = keypad.getKey();
+
+  if (key) {
+    if (key == 'A') {
+      currentProfile = 'A';
+      display.clearDisplay();
+      display.setTextSize(4);
+      display.setTextColor(SSD1306_WHITE);
+      display.setCursor(0, 0);
+      display.print("A");
+
+      display.setTextSize(1);
+      display.setCursor(30,0);
+      display.print("Google");
+      display.setCursor(30,10);
+      display.print("Brave");
+      display.setCursor(30,20);
+      display.print("Kosong");
+
+      display.setCursor(75,0);
+      display.print("WA");
+      display.setCursor(75,10);
+      display.print("TL");
+      display.setCursor(75,20);
+      display.print("DC");
+
+      display.setCursor(95,0);
+      display.print("OBS");
+      display.setCursor(95,10);
+      display.print("VOICE");
+      display.setCursor(95,20);
+      display.print("ALL");
+      
+      display.display();
+      return;
+    } else if (key == 'B') {
+      currentProfile = 'B';
+      display.clearDisplay();
+      display.setTextSize(4);
+      display.setTextColor(SSD1306_WHITE);
+      display.setCursor(0, 0);
+      display.print("B");
+
+      display.setTextSize(1);
+      display.setCursor(30,0);
+      display.print("F13");
+      display.setCursor(30,10);
+      display.print("F14");
+      display.setCursor(30,20);
+      display.print("F15");
+
+      display.setCursor(65,0);
+      display.print("F16");
+      display.setCursor(65,10);
+      display.print("F17");
+      display.setCursor(65,20);
+      display.print("F18");
+
+      display.setCursor(100,0);
+      display.print("F19");
+      display.setCursor(100,10);
+      display.print("F20");
+      display.setCursor(100,20);
+      display.print("F21");
+      
+      display.display();
+      return;
+    } else if (key == 'C') {
+      currentProfile = 'C';
+      display.clearDisplay();
+      display.setTextSize(4);
+      display.setTextColor(SSD1306_WHITE);
+      display.setCursor(0, 0);
+      display.print("C");
+
+      display.setTextSize(2);
+      display.setCursor(50,10);
+      display.print("Pass");
+      display.display();
+      return;
+    }
+
+//------------------------------Profile A----------------------------------
+    switch (currentProfile) {
+      case 'A':
+        switch (key) {
+          case '1':
+            Keyboard.press(KEY_LEFT_CTRL);
+            Keyboard.press(KEY_LEFT_SHIFT);
+            Keyboard.press(KEY_F1);
+            Keyboard.releaseAll();
+            break;
+          case '2':
+            Keyboard.press(KEY_LEFT_CTRL);
+            Keyboard.press(KEY_LEFT_SHIFT);
+            Keyboard.press(KEY_F2);
+            Keyboard.releaseAll();
+            break;
+          case '3':
+            Keyboard.press(KEY_LEFT_CTRL);
+            Keyboard.press(KEY_LEFT_SHIFT);
+            Keyboard.press(KEY_F3);
+            Keyboard.releaseAll();
+            break;
+          case '4':        
+            Keyboard.press(KEY_LEFT_CTRL);
+            Keyboard.press(KEY_LEFT_SHIFT);
+            Keyboard.press(KEY_F4);
+            Keyboard.releaseAll();
+            break;
+          case '5':
+            Keyboard.press(KEY_LEFT_CTRL);
+            Keyboard.press(KEY_LEFT_SHIFT);
+            Keyboard.press(KEY_F5);
+            Keyboard.releaseAll();
+            break;
+          case '6':
+            Keyboard.press(KEY_LEFT_CTRL);
+            Keyboard.press(KEY_LEFT_SHIFT);
+            Keyboard.press(KEY_F6);
+            Keyboard.releaseAll();
+            break;
+          case '7':
+            Keyboard.press(KEY_LEFT_CTRL);
+            Keyboard.press(KEY_LEFT_SHIFT);
+            Keyboard.press(KEY_F7);
+            Keyboard.releaseAll();
+            break;
+          case '8':
+            Keyboard.press(KEY_LEFT_CTRL);
+            Keyboard.press(KEY_LEFT_SHIFT);
+            Keyboard.press(KEY_F8);
+            Keyboard.releaseAll();
+            break;
+          case '9':
+            Keyboard.press(KEY_LEFT_GUI);
+            Keyboard.press(KEY_TAB);
+            Keyboard.releaseAll();
+            break;
+        }
+        break;
+
+
+//-----------------------------------profile B--------------------------------------
+      case 'B':
+        switch (key) {
+          case '1':
+            Keyboard.write(KEY_F13);
+            break;
+          case '2':
+            Keyboard.write(KEY_F14);
+            break;
+          case '3':
+            Keyboard.write(KEY_F15);
+            break;
+          case '4':
+            Keyboard.press(KEY_F16);
+            Keyboard.releaseAll();
+            break;
+          case '5':
+            Keyboard.write(KEY_F17);
+            break;
+          case '6':
+            Keyboard.write(KEY_F18);
+            break;
+          case '7':
+            Keyboard.write(KEY_F19);
+            break;
+          case '8':
+            Keyboard.write(KEY_F20);
+            break;
+          case '9':
+            Keyboard.write(KEY_F21);
+            break;
+        }
+        break;
+
+
+//-------------------------------Profile C-------------------------------------
+      case 'C':
+        switch (key) {
+          case '1':
+            Keyboard.print("Karuniawan Arif Windianto");
+            break;
+          case '2':
+            Keyboard.print("student");
+            break;
+          case '3':
+            Keyboard.write(KEY_RETURN);
+            delay(2000);
+            Keyboard.println("gajahterbang");
+            break;
+          case '4':
+            Keyboard.press(KEY_LEFT_GUI);
+            Keyboard.press('r');
+            Keyboard.releaseAll();
+            delay(500);
+            Keyboard.println("cmd");
+            delay(500);                         
+            Keyboard.println("F:/Shortcut_file/Start_record.bat");
+            delay(100);
+            Keyboard.println("exit");
+
+            break;
+          case '5':
+            Keyboard.write(KEY_F17);
+            break;
+          case '6':
+            Keyboard.write(KEY_RETURN);
+            break;
+          case '7':
+            Mouse.click(MOUSE_LEFT);
+            delay(100);
+            Mouse.move(50, 0);
+            delay(100);
+            Mouse.click(MOUSE_LEFT);
+            delay(100);
+            Mouse.move(-50, 0);
+            delay(500);
+            Keyboard.press(KEY_LEFT_CTRL);
+            delay(2000);
+            Keyboard.releaseAll();
+            break;
+          case '8':
+            Mouse.click(MOUSE_LEFT);
+            delay(100);
+            Mouse.move(50, 0);
+            delay(100);
+            Mouse.click(MOUSE_LEFT);
+            delay(100);
+            Mouse.move(-50, 0);
+            break;
+          case '9':
+            Keyboard.press(KEY_LEFT_CTRL);
+            delay(2000);
+            Keyboard.releaseAll();
+            break;
+        }
+        break;
+    }
+  }
+}
